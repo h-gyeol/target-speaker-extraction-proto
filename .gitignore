@@ -1,0 +1,23 @@
+# venv
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Editor/OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Data & outputs (generated)
+data_librispeech/
+*.wav
+pretrained_*/
+pretrained_sepformer/
+pretrained_ecapa/
+
+# Caches
+.cache/
+C:/Users/7/.cache/
