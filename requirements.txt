@@ -1,0 +1,18 @@
+# Core
+torch
+torchaudio
+numpy
+librosa
+soundfile
+
+# Models & embeddings
+speechbrain
+asteroid
+resemblyzer
+
+# Eval (PESQ is optional; install may fail on some Windows setups)
+pesq
+
+# Utils
+tqdm
+scipy
