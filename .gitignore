@@ -1,0 +1,63 @@
+# ============================
+# Python Environment
+# ============================
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ============================
+# Editor / OS Files
+# ============================
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ============================
+# Large Audio Files (Generated)
+# ============================
+*.wav
+*.flac
+*.mp3
+*.ogg
+
+# ============================
+# Generated Outputs
+# ============================
+sep_src*.wav
+target_*.wav
+supermask.npy
+
+# ============================
+# Data Sets
+# ============================
+data_librispeech/
+LibriSpeech/
+train-clean-100.tar
+*.tar
+*.tar.gz
+
+# ============================
+# Downloaded Models
+# ============================
+pretrained_*/
+pretrained_sepformer/
+pretrained_sepformer_3mix/
+pretrained_ecapa/
+speechbrain_pretrained/
+huggingface/
+.cache/
+hub/
+
+# ============================
+# Logs
+# ============================
+logs/
+*.log
+
+# ============================
+# Temporary files
+# ============================
+*.tmp
+*.temp
+*.bak

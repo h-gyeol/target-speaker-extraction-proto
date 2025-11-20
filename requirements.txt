@@ -1,0 +1,12 @@
+torch
+torchaudio
+numpy
+librosa
+soundfile
+speechbrain==0.5.14
+asteroid==0.7.0
+pb-bss-eval==0.0.2
+resemblyzer
+pesq
+tqdm
+scipy
