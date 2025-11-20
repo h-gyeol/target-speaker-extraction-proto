@@ -1,0 +1,4 @@
+mixture_id,chosen_path,num_candidates,top1_score,top2_score,margin
+test001,sep_src0.wav,12,0.765584,0.756844,0.008739
+test_eval001,sep_src9.wav,12,0.457079,0.455413,0.001666
+test_post001,sep_src9.wav,12,0.457079,0.455413,0.001666

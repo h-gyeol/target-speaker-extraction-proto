@@ -1,18 +1,12 @@
-# Core
 torch
 torchaudio
 numpy
 librosa
 soundfile
-
-# Models & embeddings
-speechbrain
-asteroid
+speechbrain==0.5.14
+asteroid==0.7.0
+pb-bss-eval==0.0.2
 resemblyzer
-
-# Eval (PESQ is optional; install may fail on some Windows setups)
 pesq
-
-# Utils
 tqdm
 scipy
