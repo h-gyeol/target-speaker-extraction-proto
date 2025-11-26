@@ -6,6 +6,7 @@ import os
 import csv
 from speechbrain.pretrained import EncoderClassifier
 import torch
+import librosa  # 추가: 제대로 된 리샘플링을 위해
 
 def append_log_row(log_csv, mixture_id, chosen_path, scores):
     """CSV 로그 파일에 한 줄을 append한다."""
@@ -101,12 +102,9 @@ def vad_embed(path, encoder, sr=16000):
         wav = wav.mean(axis=1)  # mono
     wav = wav.astype(np.float32)
 
-    # 리샘플 필요하면 리샘플 (프로젝트는 대부분 16k라 보통 그대로)
+    # 리샘플: librosa로 정확한 리샘플링 (8kHz → 16kHz 등)
     if file_sr != sr:
-        # 간단한 numpy 리샘플 대신 librosa나 torchaudio를 쓸 수 있지만
-        # 의존성 증가를 피하기 위해 빠르게 frame-skip 방식 사용해도 OK
-        ratio = file_sr / sr
-        wav = wav[::int(ratio)] if ratio >= 1 else wav
+        wav = librosa.resample(wav, orig_sr=file_sr, target_sr=sr)
 
     # 1) VAD로 음성 구간 찾기
     segments = simple_energy_vad(wav)
@@ -154,10 +152,9 @@ def ecapa_embed(path, ecapa_model, sr=16000):
         wav = wav.mean(axis=1)
     wav = wav.astype(np.float32)
 
-    # 리샘플: ECAPA는 16k 기준
+    # 리샘플: ECAPA는 16k 기준 (librosa로 정확한 리샘플링)
     if file_sr != sr:
-        ratio = file_sr / sr
-        wav = wav[::int(ratio)] if ratio >= 1 else wav
+        wav = librosa.resample(wav, orig_sr=file_sr, target_sr=sr)
 
     # SpeechBrain의 ECAPA 입력: [batch, time]
     wav_tensor = torch.tensor(wav, dtype=torch.float32).unsqueeze(0)  # (1, T)
@@ -201,6 +198,13 @@ if len(sys.argv) >= 3:
 else:
     log_csv = "logs/target_selection_log.csv"
 
+# ============================================================
+# 가중치 설정 (ECAPA가 화자 인식에 더 특화되어 있으므로 비중 높임)
+# ============================================================
+WEIGHT_ECAPA = 0.7
+WEIGHT_RESEM = 0.3
+MARGIN_THRESHOLD = 0.05  # top1-top2 차이가 이 값 미만이면 경고
+
 for p in cands:
     # 1) Resemblyzer VAD 임베딩
     emb_r = vad_embed(p, enc)
@@ -208,16 +212,36 @@ for p in cands:
     # 2) ECAPA 임베딩
     emb_e = ecapa_embed(p, ecapa_model)
     s_e = cos(e_tgt_ecapa, emb_e)
-    # 3) 최종 융합 스코어 (평균)
-    s = (s_r + s_e) / 2.0
-    print(f"{p}: resem={s_r:.3f}, ecapa={s_e:.3f}, fused={s:.3f}")
+    # 3) 최종 융합 스코어 (가중 평균: ECAPA 70%, Resemblyzer 30%)
+    s = WEIGHT_RESEM * s_r + WEIGHT_ECAPA * s_e
+    print(f"{p}: resem={s_r:.3f}, ecapa={s_e:.3f}, fused={s:.3f} (weights: resem={WEIGHT_RESEM}, ecapa={WEIGHT_ECAPA})")
     scores.append((p, s))
     if s > best_sim:
         best_sim, best_path = s, p
 
+# ============================================================
+# 마진 검증: top1과 top2 점수 차이 확인
+# ============================================================
+sorted_scores = sorted(scores, key=lambda x: x[1], reverse=True)
+top1_path, top1_score = sorted_scores[0]
+top2_path, top2_score = sorted_scores[1] if len(sorted_scores) > 1 else (None, 0.0)
+margin = top1_score - top2_score
+
+print(f"\n[마진 분석]")
+print(f"  Top1: {top1_path} (score={top1_score:.4f})")
+print(f"  Top2: {top2_path} (score={top2_score:.4f})")
+print(f"  Margin: {margin:.4f}")
+
+if margin < MARGIN_THRESHOLD:
+    print(f"  ⚠️  [경고] 마진({margin:.4f})이 임계값({MARGIN_THRESHOLD}) 미만입니다!")
+    print(f"       동성/유사 음색 화자로 인해 신뢰도가 낮을 수 있습니다.")
+    print(f"       추가 검증이 권장됩니다.")
+else:
+    print(f"  ✓ 마진 충분: 선택 신뢰도 양호")
+
 y, sr = sf.read(best_path)
 if y.ndim > 1: y = y.mean(axis=1)
 sf.write("target_emphasized.wav", y, sr)
-print(f"Selected: {best_path} (sim={best_sim:.3f}) -> target_emphasized.wav")
+print(f"\nSelected: {best_path} (sim={best_sim:.3f}) -> target_emphasized.wav")
 append_log_row(log_csv, mixture_id, best_path, scores)
 print(f"[INFO] 로그 기록 완료: {log_csv}")
