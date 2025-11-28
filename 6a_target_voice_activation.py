@@ -75,7 +75,16 @@ def main():
     if mix.ndim > 1:
         mix = mix.mean(axis=1)
 
-    tgt, sr2 = sf.read("target_supermask.wav")
+    # 5e의 출력(target_superboost.wav)이 있으면 사용, 없으면 target_supermask.wav 사용
+    import os
+    if os.path.exists("target_superboost.wav"):
+        tgt_path = "target_superboost.wav"
+        print("[INFO] Using 5e output: target_superboost.wav")
+    else:
+        tgt_path = "target_supermask.wav"
+        print("[INFO] Using fallback: target_supermask.wav")
+    
+    tgt, sr2 = sf.read(tgt_path)
     if tgt.ndim > 1:
         tgt = tgt.mean(axis=1)
     if sr2 != sr:

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 ECAPA 기반 타깃 화자 Supermask Refinement (길이/샘플레이트 자동 맞춤 버전)
+- 5c의 출력(target_emphasized_enh.wav)을 타겟으로 활용
 """
 
+import os
 import numpy as np
 import soundfile as sf
 import glob
@@ -62,14 +64,26 @@ def main():
     target_len = len(mix)
 
     # -------------------------------
-    # Load enroll
+    # Load target from previous step (5c output)
     # -------------------------------
-    enroll, sr_en = sf.read("enroll_target_clean.wav")
-    if enroll.ndim > 1:
-        enroll = enroll.mean(axis=1)
+    # 5c의 출력(target_emphasized_enh.wav)이 있으면 사용, 없으면 target_emphasized.wav 사용
+    if os.path.exists("target_emphasized_enh.wav"):
+        tgt_path = "target_emphasized_enh.wav"
+        print("[INFO] Using 5c output: target_emphasized_enh.wav")
+    else:
+        tgt_path = "target_emphasized.wav"
+        print("[INFO] Using fallback: target_emphasized.wav")
+    
+    y_tgt, sr_tgt = sf.read(tgt_path)
+    if y_tgt.ndim > 1:
+        y_tgt = y_tgt.mean(axis=1)
+    y_tgt = y_tgt.astype(np.float32)
+    
+    # 샘플레이트/길이 맞춤
+    y_tgt = fix_sr_and_len(y_tgt, sr_tgt, sr_mix, target_len)
 
     # -------------------------------
-    # Load separated sources
+    # Load separated sources (방해 화자용)
     # -------------------------------
     sep_paths = sorted(glob.glob("sep_src*.wav"))
     print("[INFO] separated sources:", sep_paths)
@@ -92,9 +106,12 @@ def main():
     ]
 
     # -------------------------------
-    # ECAPA similarity to choose target src
+    # ECAPA로 타겟과 가장 유사한 sep_src 제외 (방해 화자만 남김)
     # -------------------------------
     model = load_ecapa("cpu")
+    enroll, sr_en = sf.read("enroll_target_clean.wav")
+    if enroll.ndim > 1:
+        enroll = enroll.mean(axis=1)
     emb_enroll = ecapa_embed(model, enroll)
 
     sims = []
@@ -105,9 +122,10 @@ def main():
     sims = np.array(sims)
     print("[INFO] ECAPA similarity per source:", sims)
 
+    # 타겟과 가장 유사한 소스 제외 → 나머지는 방해 화자
     idx = int(np.argmax(sims))
-    y_tgt = seps_fixed[idx]
     others = [seps_fixed[i] for i in range(len(seps_fixed)) if i != idx]
+    print(f"[INFO] Target src index: {idx}, Others count: {len(others)}")
 
     # -------------------------------
     # STFT (전체 길이 동일하므로 broadcasting OK)

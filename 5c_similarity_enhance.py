@@ -186,13 +186,7 @@ def enhance_with_ecapa(enroll_path: str,
 if __name__ == "__main__":
     # 기본 입력 파일 이름 지정
     enroll_path = "enroll_target_clean.wav"
-
-    # post-filter 결과가 있으면 그걸 쓰고, 아니면 그냥 target_emphasized.wav 사용
-    if os.path.exists("target_emphasized_post.wav"):
-        in_path = "target_emphasized_post.wav"
-    else:
-        in_path = "target_emphasized.wav"
-
+    in_path = "target_emphasized.wav"
     out_path = "target_emphasized_enh.wav"
 
     enhance_with_ecapa(
