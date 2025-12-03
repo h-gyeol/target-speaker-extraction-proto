@@ -10,4 +10,3 @@ resemblyzer
 pesq
 tqdm
 scipy
-pydub  # 다양한 오디오 형식 지원 (.m4a, .mp3 등)
